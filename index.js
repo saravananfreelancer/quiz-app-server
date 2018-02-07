@@ -4,6 +4,7 @@ const Hapi = require('hapi');
 const Inert = require('inert');
 const Vision = require('vision');
 const Joi = require('joi');
+const moment = require('moment');
 const HapiSwagger = require('hapi-swagger');
 const Pack = require('./package');
 const server = new Hapi.Server();
@@ -25,31 +26,31 @@ db.query("SELECT * FROM config",function(err,res){
 			console.log("****CONGIF NO DATA*****")
 		}
 	} else {
-		console.log("****CONGIF ERROR*****");		
+		console.log("****CONGIF ERROR*****");
 	}
 });
 server.connection({
 	//host: "localhost",
 	port: process.env.PORT || config.server.port,
-	routes: { cors: true } 
+	routes: { cors: true }
 });
-var io = require('socket.io')(server.listener);
-io.on('connection', function(socket){ 
-    socketComponent.onLoad(socket,io);     
+var io = require('socket.io')(server.listener, { pingTimeout: 30000 });
+io.on('connection', function(socket){
+    socketComponent.onLoad(socket,io);
 });
 
-var quizScheduleTime = ["2018-02-03 06:33:00","2018-02-02 13:45:00","2018-02-01 13:45:00"];  
+var quizScheduleTime = [moment().add(20,"seconds").format("YYYY-MM-DD HH:mm:ss"),"2018-02-02 13:45:00","2018-02-01 13:45:00"];
 
-socketComponent.scheduleJobEvents(quizScheduleTime); 
-  
-  
+socketComponent.scheduleJobEvents(quizScheduleTime);
+//socketComponent.quizGoingStart();
+
 const options = {
 	info: {
 		'title': 'Quiz APP',
 		'version': Pack.version,
 	}
 };
- 
+
 server.register([
     Inert,
     Vision,
@@ -66,8 +67,7 @@ server.register([
         });
     });
 
-	
+
 router.map(function(routerData) {
 	server.route(routerData);
 })
-

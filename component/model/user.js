@@ -21,9 +21,10 @@ userModule.checkUser = function(request,cb) {
 	});
 }
 userModule.userDetails = function(request,cb) {
-	//console.log(request);
+	console.log(request);
 	db.query("select * from userdetails where facebookId = '" + request.userId + "'",function(err,res){
 		if(!err){
+			console.log(res);
 			if(res.length > 0){
 				cb(null,res[0])
 			} else {
@@ -36,7 +37,7 @@ userModule.userDetails = function(request,cb) {
 }
 
 userModule.createUser = function(payload,cb) {
-	
+
 	var userName = payload.name,
 		facebookId = payload.userId,
 		UUID = uuidV1(),

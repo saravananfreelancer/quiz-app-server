@@ -23,7 +23,7 @@ socketComponent.scheduleJobEvents = function(quizScheduleTime,configDetails) {
             cronTimeMinutes = Number(scheduleTimeMinutes) - 5;
         }*/
         var cronTime = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").format()),
-            cronTimeBefore = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").subtract(1, 'minutes').format());
+            cronTimeBefore = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").subtract(10, 'seconds').format());
             //cronTimeBefore = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").subtract(configDetails.startBefore, 'minutes').format());
             cronTimefirstQuestionPass= new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").add(configDetails.questionTime, 'seconds').format());
         schedule.scheduleJob(cronTimeBefore, function(){
@@ -40,9 +40,9 @@ socketComponent.scheduleJobEvents = function(quizScheduleTime,configDetails) {
         });
     });
 }
- 
- 
- 
+
+
+
 socketComponent.onLoad = function(socket,io,Config) {
 	var Config = process.env;
 	Config.questionTime = Number(Config.questionTime);
@@ -51,12 +51,15 @@ socketComponent.onLoad = function(socket,io,Config) {
 	Config.startBefore = Number(Config.startBefore);
     this.socket = socket;
     this.io = io;
-    this.gapBetweenQuiz = Number(Config.questionTime) + Number(Config.answerTime) + Number(Config.breakTime);
+    this.gapBetweenQuiz = Number(Config.questionTime) + Number(Config.answerTime) + Number(Config.breakTime) + 2;
     this.config = Config
-    clients.push(socket); 
-    //console.log(clients);    
+    clients.push(socket);
+    console.log(clients);
     socket.on("userDetails",function(userData){
-        socketComponent.userDetails(userData)
+		console.log("SAdsA");
+        socketComponent.userDetails(userData);
+				//socketComponent.quizStart();
+				//socketComponent.quizGoingStart();
     });
     socket.on("quizResponse",function(data){
         socketComponent.quizResponse(data)
@@ -89,10 +92,11 @@ socketComponent.quizGoingStart = function(){
             clientDetails.join("quizEditMode");
         });
         if(this.io){
-            this.io.in('quizEditMode').emit('quizGoingToStart', {"date":moment().format()});
-        }        
+			var examTime = moment().add(3,"minutes").format();
+            this.io.in('quizEditMode').emit('quizGoingToStart', {"quizStartIn":15,"quizTime":examTime,"currentTime":moment().format()});
+        }
     }
-    
+
     //this.insertInReadMode = true;
     //this.quizStart();
 }
@@ -112,7 +116,7 @@ socketComponent.questionDetails = function(){
     ];
     //this.answerList = [1,2,3,3,2,1,1,2,3,2];
     this.questionNo = 0;
-    if(this.io) {        
+    if(this.io) {
         this.io.in('quizEditMode').emit('quizEditMode', this.questionList[0]);
         this.io.in('quizReadMode').emit('quizReadMode', this.questionList[0]);
     }
@@ -138,7 +142,7 @@ socketComponent.sendQuestion = function(){
         insertInReadMode = undefined;
         insertInRoomquiz = undefined;
         socketComponent.quizResult();
-    }    
+    }
 }
 socketComponent.questionIteration = function(){
     var tenSec=setInterval(function(){startTime()}.bind(this),1000);
@@ -156,15 +160,24 @@ socketComponent.questionIteration = function(){
                 insertInRoomquiz = false;
               }
               if(_this.io) {
-                  if(counter > Number(_this.config.questionTime) && counter <= (Number(_this.config.questionTime) + Number(_this.config.answerTime))){
-                      _this.io.in('quizEditMode').emit('showAnwserTimer', {"mode":"quizEditMode",timer:Number(_this.config.answerTime)});
-                      _this.io.in('quizReadMode').emit('showAnwserTimer', {"mode":"quizReadMode",timer:Number(_this.config.answerTime)});                      
+                  if(counter > Number(_this.config.questionTime) && counter <= (Number(_this.config.questionTime) + Number(_this.config.answerTime) + 1)){
+                      _this.io.in('quizEditMode').emit('showAnwserTimer', {"question":_this.questionList[_this.questionNo],"mode":"quizEditMode",counterTime:Math.abs((counter) - (Number(_this.config.questionTime) + Number(_this.config.answerTime) + 1)),timer:Number(_this.config.answerTime)});
+                      _this.io.in('quizReadMode').emit('showAnwserTimer', {"question":_this.questionList[_this.questionNo],"mode":"quizReadMode",counterTime:Math.abs((counter) - (Number(_this.config.questionTime) + Number(_this.config.answerTime) + 1)),timer:Number(_this.config.answerTime)});
                   } else if(counter > (Number(_this.config.questionTime) + Number(_this.config.answerTime))){
-                      _this.io.in('quizEditMode').emit('showTimerBreak', {"mode":"quizEditMode",timer:Number(_this.config.breakTime)});
-                      _this.io.in('quizReadMode').emit('showTimerBreak', {"mode":"quizReadMode",timer:Number(_this.config.breakTime)});       
+                      _this.io.in('quizEditMode').emit('showTimerBreak', {
+											"mode":"quizEditMode",
+											"question":_this.questionList[_this.questionNo],
+											"counter":Math.abs((counter - (Number(_this.config.questionTime) + Number(_this.config.answerTime) + 2)) - Number(_this.config.breakTime)),
+											breakTimer:Number(_this.config.breakTime),
+										});
+                      _this.io.in('quizReadMode').emit('showTimerBreak', {
+												"mode":"quizReadMode",
+												"question":_this.questionList[_this.questionNo],
+												"counter":counter - (Number(_this.config.questionTime) + Number(_this.config.answerTime) + 2),
+												breakTimer:Number(_this.config.breakTime)});
                   } else {
                       _this.io.in('quizEditMode').emit('timer', {"question":_this.questionList[_this.questionNo],timer:counter,"mode":"quizEditMode"});
-                      _this.io.in('quizReadMode').emit('timer', {"question":_this.questionList[_this.questionNo],timer:counter,"mode":"quizReadMode"});        
+                      _this.io.in('quizReadMode').emit('timer', {"question":_this.questionList[_this.questionNo],timer:counter,"mode":"quizReadMode"});
                   }
               }
           }
@@ -186,4 +199,4 @@ socketComponent.disconnect =function(){
 socketComponent.quizResult =function(){
     console.log(this.io.in('quizEditMode').clients());
 }
-module.exports = socketComponent; 
+module.exports = socketComponent;
