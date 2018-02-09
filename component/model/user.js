@@ -21,12 +21,10 @@ userModule.checkUser = function(request,cb) {
 	});
 }
 userModule.userDetails = function(request,cb) {
-	console.log(request);
 	db.query("select * from userdetails where facebookId = '" + request.userId + "'",function(err,res){
 		if(!err){
-			console.log(res);
 			if(res.length > 0){
-				cb(null,res[0])
+				userModule.token(res[0],cb)
 			} else {
 				cb(true,null)
 			}
@@ -35,7 +33,14 @@ userModule.userDetails = function(request,cb) {
 		}
 	});
 }
-
+userModule.token = function(userRecord,cb){
+			var userToken = uuidV1();
+			db.query("insert into session(userId,token) values('"+userRecord.facebookId+"','"+userToken+"')",function(err,res){
+				if(!err){
+					cb(null,userRecord,userToken)
+				}
+			})
+}
 userModule.createUser = function(payload,cb) {
 
 	var userName = payload.name,

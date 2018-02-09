@@ -1,8 +1,11 @@
 var moment = require("moment");
 var schedule = require('node-schedule');
+var quizModel = require("../model/quiz");
 var clients = [];
 var insertInRoomquiz,insertInReadMode;
 var socketComponent = {};
+var activeUser = [];
+var inActiveUser = [];
 
 socketComponent.scheduleJobEvents = function(quizScheduleTime,configDetails) {
 	var configDetails = process.env;
@@ -10,20 +13,10 @@ socketComponent.scheduleJobEvents = function(quizScheduleTime,configDetails) {
 	configDetails.answerTime = Number(configDetails.answerTime);
 	configDetails.breakTime = Number(configDetails.breakTime);
 	configDetails.startBefore = Number(configDetails.startBefore);
+	console.log(configDetails.startBefore);
     quizScheduleTime.map(function(scheduleTime){
-        /*scheduleTime = scheduleTime.split(":");
-        var scheduleTimeHours = scheduleTime[0],
-            scheduleTimeMinutes = scheduleTime[1];
-        var cronTimeHours,cronTimeMinutes;
-        if(scheduleTimeMinutes == "00") {
-            cronTime = Number(scheduleTimeHours) - 1;
-            cronTimeMinutes = "55";
-        } else {
-            cronTime = Number(scheduleTimeHours);
-            cronTimeMinutes = Number(scheduleTimeMinutes) - 5;
-        }*/
         var cronTime = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").format()),
-            cronTimeBefore = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").subtract(10, 'seconds').format());
+            cronTimeBefore = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").subtract(configDetails.startBefore, 'seconds').format());
             //cronTimeBefore = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").subtract(configDetails.startBefore, 'minutes').format());
             cronTimefirstQuestionPass= new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").add(configDetails.questionTime, 'seconds').format());
         schedule.scheduleJob(cronTimeBefore, function(){
@@ -40,26 +33,39 @@ socketComponent.scheduleJobEvents = function(quizScheduleTime,configDetails) {
         });
     });
 }
-
-
-
+socketComponent.configSetter = function(){
+		var Config = process.env;
+		Config.questionTime = Number(Config.questionTime);
+		Config.answerTime = Number(Config.answerTime);
+		Config.breakTime = Number(Config.breakTime);
+		Config.startBefore = Number(Config.startBefore);
+		this.gapBetweenQuiz = Number(Config.questionTime) + Number(Config.answerTime) + Number(Config.breakTime) + 2;
+		this.config = Config
+}
 socketComponent.onLoad = function(socket,io,Config) {
-	var Config = process.env;
-	Config.questionTime = Number(Config.questionTime);
-	Config.answerTime = Number(Config.answerTime);
-	Config.breakTime = Number(Config.breakTime);
-	Config.startBefore = Number(Config.startBefore);
+		socketComponent.configSetter();
+		var _this = this;
     this.socket = socket;
     this.io = io;
-    this.gapBetweenQuiz = Number(Config.questionTime) + Number(Config.answerTime) + Number(Config.breakTime) + 2;
-    this.config = Config
+
     clients.push(socket);
-    console.log(clients);
+    //console.log(clients);
+		socket.emit("getUserDetais")
     socket.on("userDetails",function(userData){
-		console.log("SAdsA");
+		//console.log("SAdsA");
         socketComponent.userDetails(userData);
 				//socketComponent.quizStart();
 				//socketComponent.quizGoingStart();
+				if(insertInRoomquiz) {
+						activeUser.push(_this.socket.userFBId);
+		        _this.socket.join("quizEditMode");
+		    } else if(insertInReadMode){
+						inActiveUser.push(_this.socket.userFBId);
+		        _this.socket.join("quizReadMode");
+		    }
+		    if(_this.quizStarted) {
+		        socketComponent.quizStart(true);
+		    }
     });
     socket.on("quizResponse",function(data){
         socketComponent.quizResponse(data)
@@ -68,32 +74,38 @@ socketComponent.onLoad = function(socket,io,Config) {
         socketComponent.disconnect()
     });
     //console.log(insertInReadMode)
-    if(insertInRoomquiz) {
-        this.socket.join("quizEditMode");
-    } else if(insertInReadMode){
-        this.socket.join("quizReadMode");
-    }
-    if(this.quizStarted) {
-        socketComponent.quizStart(true);
-    }
+
     //if(clients.length  == 2){
     //    console.log("adasasdasdas")
     //    socketComponent.quizGoingStart();
    // }
 }
 socketComponent.userDetails = function(data){
-    var examTime = moment().add(3,"minutes").format();
-    this.socket.emit("quizTiming",{"quizTime":examTime,"currentTime":moment().format()});
+		//console.log(this.socket.id)
+		data.socketId = this.socket.id;
+		this.socket.userFBId = data.facebookId;
+		console.log(data.facebookId);
+		quizModel.socketSession(data,(err,res)=>{
+
+		})
+    //var examTime = moment().add(3,"minutes").format();
+    //this.socket.emit("quizTiming",{"quizTime":examTime,"currentTime":moment().format()});
 }
 socketComponent.quizGoingStart = function(){
+		socketComponent.configSetter();
     insertInRoomquiz = true;
+		console.log("dasd");
+		quizModel.quizQuestion((err,res)=>{
+				this.questionList = res;
+		})
     if(clients.length > 0){
         clients.map(function(clientDetails){
             clientDetails.join("quizEditMode");
+						activeUser.push(clientDetails.userFBId);
         });
+				console.log(activeUser);
         if(this.io){
-			var examTime = moment().add(3,"minutes").format();
-            this.io.in('quizEditMode').emit('quizGoingToStart', {"quizStartIn":15,"quizTime":examTime,"currentTime":moment().format()});
+						this.io.in('quizEditMode').emit('quizGoingToStart', {"quizStartIn":this.config.startBefore});
         }
     }
 
@@ -101,7 +113,8 @@ socketComponent.quizGoingStart = function(){
     //this.quizStart();
 }
 socketComponent.questionDetails = function(){
-    this.questionList = [{"question":"1","option":["sdsadsa","asdasdasds","asdssds"],"answer":1},
+		socketComponent.configSetter();
+		/*this.questionList = [{"question":"1","option":["sdsadsa","asdasdasds","asdssds"],"answer":1},
      {"question":"2","option":["sdsadsa","asdasdasds","asdssds"],"answer":1},
      {"question":"3","option":["sdsadsa","asdasdasds","asdssds"],"answer":1},
      {"question":"4","option":["sdsadsa","asdasdasds","asdssds"],"answer":1},
@@ -113,7 +126,7 @@ socketComponent.questionDetails = function(){
      {"question":"10","option":["sdsadsa","asdasdasds","asdssds"],"answer":1},
      {"question":"11","option":["sdsadsa","asdasdasds","asdssds"],"answer":1},
      {"question":"12","option":["sdsadsa","asdasdasds","asdssds"],"answer":1},
-    ];
+	 ];*/
     //this.answerList = [1,2,3,3,2,1,1,2,3,2];
     this.questionNo = 0;
     if(this.io) {
@@ -125,18 +138,20 @@ socketComponent.questionDetails = function(){
 socketComponent.quizResponse = function(data){
     //if(this.answerList[this.questionNo] != data.answer){
     if(!data.isAnswerCorrect){
+				activeUser.splice(activeUser.indexOf(this.socket.userFBId), 1);
         this.socket.leave('quizEditMode');
-        this.socket.leave('quizReadMode');
+				inActiveUser.push(this.socket.userFBId);
+        this.socket.join('quizReadMode');
     }
 }
 socketComponent.sendQuestion = function(){
     this.questionNo += 1;
-    if(this.io) {
-        this.io.in('quizEditMode').emit('quizEditMode', this.questionList[this.questionNo]);
-        this.io.in('quizReadMode').emit('quizReadMode', this.questionList[this.questionNo]);
-    }
     //console.log(this.questionNo < (this.questionList.length - 1),this.questionNo,this.questionList.length)
-    if(this.questionNo < (this.questionList.length - 1)){
+    if(this.questionNo < (this.questionList.length)){
+				if(this.io) {
+		        this.io.in('quizEditMode').emit('quizEditMode', this.questionList[this.questionNo]);
+		        this.io.in('quizReadMode').emit('quizReadMode', this.questionList[this.questionNo]);
+		    }
         socketComponent.questionIteration();
     } else {
         insertInReadMode = undefined;
@@ -193,10 +208,25 @@ socketComponent.quizStart = function(isSingle){
         socketComponent.questionDetails();
     }
 }
-socketComponent.disconnect =function(){
+socketComponent.disconnect = function(){
+		quizModel.deleteSocketSession(this.socket.id,(err,res)=>{
+
+		})
+		activeUser.splice(activeUser.indexOf(this.socket.userFBId), 1);
     clients.splice(clients.indexOf(this.socket), 1);
 }
-socketComponent.quizResult =function(){
-    console.log(this.io.in('quizEditMode').clients());
+socketComponent.quizResult =function() {
+		clients = [];
+		_this = this;
+		console.log(activeUser,"active");
+    console.log(inActiveUser,"InActive");
+		quizModel.getWinerList(activeUser,(err,res)=>{
+				if(!err){
+					activeUser = [];
+					inActiveUser = []
+					_this.io.in('quizEditMode').emit('winnerList',{"mode":"quizEditMode",winners:res,"winnerAmount":200});
+					_this.io.in('quizReadMode').emit('winnerList',{"mode":"quizReadMode",winners:res,"winnerAmount":200});
+				}
+		})
 }
 module.exports = socketComponent;

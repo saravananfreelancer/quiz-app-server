@@ -22,6 +22,9 @@ db.query("SELECT * FROM config",function(err,res){
 				process.env[records.configKey] = Number(records.configValue);
 			});
 			console.log("DB CONFIG UPDATED",process.env.questionTime);
+			var quizScheduleTime = [moment().add(20,"seconds").format("YYYY-MM-DD HH:mm:ss"),"2018-02-02 13:45:00","2018-02-01 13:45:00"];
+
+			socketComponent.scheduleJobEvents(quizScheduleTime);
 		} else {
 			console.log("****CONGIF NO DATA*****")
 		}
@@ -39,9 +42,6 @@ io.on('connection', function(socket){
     socketComponent.onLoad(socket,io);
 });
 
-var quizScheduleTime = [moment().add(20,"seconds").format("YYYY-MM-DD HH:mm:ss"),"2018-02-02 13:45:00","2018-02-01 13:45:00"];
-
-socketComponent.scheduleJobEvents(quizScheduleTime);
 //socketComponent.quizGoingStart();
 
 const options = {
