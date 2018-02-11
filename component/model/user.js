@@ -69,4 +69,116 @@ userModule.createUser = function(payload,cb) {
 		}
 	});
 }
+userModule.listOfUser = function(cb){
+		var sqlQuery = "select * from  userdetails";
+		db.query(sqlQuery,function(err,res){
+				if(!err) {
+					cb(null,res)
+				} else {
+					cb(true,null)
+				}
+		})
+}
+userModule.blockUser = function(req,cb){
+		var sqlQuery = "update userdetails set isBlock =" +req.isBlock + " where id = '"+req.userId+"'";
+		console.log(sqlQuery)
+		db.query(sqlQuery,function(err,res){
+				if(!err) {
+					cb(null,"success")
+				} else {
+					cb(true,null)
+				}
+		})
+}
+userModule.login = function(req,cb){
+		var sqlQuery = "select * from admindetails where userName = '"+req.userName+"' and password = MD5('"+req.password+"')";
+		//console.log(sqlQuery)
+		db.query(sqlQuery,function(err,res){
+				if(!err) {
+					if(res.length > 0){
+						var userToken = uuidV1();
+						db.query("insert into session(userId,token,isAdmin) values('"+res[0].id+"','"+userToken+"','true')",function(err,res){
+							if(!err){
+								cb(null,{token:userToken});
+							} else {
+								cb(true,"failed")
+							}
+						})
+					} else {
+						cb(true,"failed")
+					}
+				} else {
+					cb(true,"DB failed")
+				}
+		})
+}
+
+userModule.createAdmin = function(req,cb){
+		var userCheck = "select * from admindetails where userName = '"+req.userName+"'";
+		db.query(userCheck,function(err,res){
+				if(!err) {
+					if(res.length == 0){
+						var sqlQuery = "insert into admindetails(userName,password) values('" +req.userName+ "',MD5('"+req.password+"'))";
+						//console.log(sqlQuery)
+						db.query(sqlQuery,function(err,res){
+								if(!err) {
+									cb(true,"success")
+								} else {
+									cb(true,"DB failed")
+								}
+						})
+					} else {
+						cb(true,"User already in DB")
+					}
+				} else {
+					cb(true,"DB failed")
+				}
+		})
+
+}
+
+userModule.changePassword = function(req,cb){
+	var sqlQuery = "select * from admindetails where userName = '"+req.userName+"' and password = MD5('"+req.oldPassword+"')";
+	//console.log(sqlQuery)
+	db.query(sqlQuery,function(err,res){
+			if(!err) {
+				if(res.length > 0){
+					var updatePassword = "update admindetails set password = MD5('"+req.password+"') where userName = '"+req.userName+"'"
+					db.query(updatePassword,function(err,res){
+							if(!err) {
+								cb(null,"success")
+							} else {
+								cb(true,"failed")
+							}
+				  })
+				} else {
+					cb(true,"failed")
+				}
+			} else {
+				cb(true,"DB failed")
+			}
+	})
+}
+userModule.checkHeader = function(head,cb){
+	//console.log(head)
+	if(head.indexOf("bearer ") > -1){
+		head = head.split("bearer ");
+		var sql ="select * from session where token='"+head[1]+"'";
+		db.query(sql,function(err,res){
+				if(!err) {
+					if(res.length > 0){
+						cb(null,{});
+					} else {
+						cb(true,"failed")
+					}
+				} else {
+					cb(true,"failed")
+				}
+		})
+	} else {
+		cb(true,"failed")
+	}
+
+}
+
 module.exports = userModule;

@@ -11,6 +11,7 @@ const server = new Hapi.Server();
 var socketComponent = require("./component/socket/index.js");
 var config = require("./config/config.js")[process.env.ROLE];
 var db = require("./db/db.js");
+var user = require("./component/model/user.js");
 process.env["questionTime"] = 10;
 process.env["answerTime"] = 5;
 process.env["breakTime"] = 10;
@@ -48,8 +49,33 @@ const options = {
 	info: {
 		'title': 'Quiz APP',
 		'version': Pack.version,
-	}
+	},
+	securityDefinitions: {
+    Bearer: {
+      type: 'apiKey',
+      name: 'Authorization',
+      in: 'header'
+    }
+  }
 };
+
+const scheme = function (server, options) {
+  return {
+    authenticate: function (request, reply) {
+			console.log(request.headers.authorization)
+			user.checkHeader(request.headers.authorization,function(err,succ){
+				//console.log("zcxzcxzcxz",err,succ);
+				if(!err){
+					return reply.continue({credentials: {user: succ}})
+				} else {
+					return reply({statusCode:401,message:'Access denied'});
+				}
+			})
+    }
+  }
+}
+server.auth.scheme('custom', scheme);
+server.auth.strategy('Bearer', 'custom'); // Strategy name may be different from that of hapi-swagger definitions.
 
 server.register([
     Inert,

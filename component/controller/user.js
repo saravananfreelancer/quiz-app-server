@@ -30,5 +30,51 @@ userController.userDetails = function(req,reply) {
 	})
 }
 
+userController.listOfUser = function(req,reply) {
+	userModel.listOfUser(function(err,succ) {
+		if(err) {
+			return reply({"status":400,"message":err});
+		} else {
+			return reply({"status":200,"userList":succ});
+		}
+	})
+}
+userController.blockUser = function(req,reply) {
+	userModel.blockUser(req.payload,function(err,succ) {
+		if(err) {
+			return reply({"status":400,"message":err});
+		} else {
+			return reply({"status":200,"message":succ});
+		}
+	})
+}
+userController.login = function(req,reply) {
+	userModel.login(req.payload,function(err,succ) {
+		if(err) {
+			return reply({"status":400,"message":succ});
+		} else {
+			return reply({"status":200,"message":succ});
+		}
+	})
+}
+userController.createAdmin = function(req,reply) {
+	userModel.createAdmin(req.payload,function(err,succ) {
+		if(err) {
+			return reply({"status":400,"message":succ});
+		} else {
+			return reply({"status":200,"message":succ});
+		}
+	})
+}
+userController.changePassword = function(req,reply) {
+	userModel.changePassword(req.payload,function(err,succ) {
+		if(err) {
+			return reply({"status":400,"message":succ});
+		} else {
+			return reply({"status":200,"message":succ});
+		}
+	})
+}
+
 
 module.exports = userController;
