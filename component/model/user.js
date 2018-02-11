@@ -161,7 +161,7 @@ userModule.changePassword = function(req,cb){
 }
 userModule.checkHeader = function(head,cb){
 	//console.log(head)
-	if(head.indexOf("bearer ") > -1){
+	if(head && head != "" && head.indexOf("bearer ") > -1){
 		head = head.split("bearer ");
 		var sql ="select * from session where token='"+head[1]+"'";
 		db.query(sql,function(err,res){

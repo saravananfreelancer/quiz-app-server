@@ -8,10 +8,11 @@ const moment = require('moment');
 const HapiSwagger = require('hapi-swagger');
 const Pack = require('./package');
 const server = new Hapi.Server();
-var socketComponent = require("./component/socket/index.js");
+//var socketComponent = require("./component/socket/index.js");
 var config = require("./config/config.js")[process.env.ROLE];
 var db = require("./db/db.js");
 var user = require("./component/model/user.js");
+var sceduler = require("./component/model/sceduler.js");
 process.env["questionTime"] = 10;
 process.env["answerTime"] = 5;
 process.env["breakTime"] = 10;
@@ -23,9 +24,10 @@ db.query("SELECT * FROM config",function(err,res){
 				process.env[records.configKey] = Number(records.configValue);
 			});
 			console.log("DB CONFIG UPDATED",process.env.questionTime);
-			var quizScheduleTime = [moment().add(20,"seconds").format("YYYY-MM-DD HH:mm:ss"),"2018-02-02 13:45:00","2018-02-01 13:45:00"];
+			//var quizScheduleTime = [moment().add(20,"seconds").format("YYYY-MM-DD HH:mm:ss"),"2018-02-02 13:45:00","2018-02-01 13:45:00"];
+			sceduler.callQuiz();
+			//socketComponent.scheduleJobEvents(quizScheduleTime);
 
-			socketComponent.scheduleJobEvents(quizScheduleTime);
 		} else {
 			console.log("****CONGIF NO DATA*****")
 		}
