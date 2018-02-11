@@ -6,7 +6,7 @@ var moment = require('moment');
 var quizScedule = {};
 var socketComponent = require("../socket/index.js");
 
-quizScedule.callQuiz = function() {
+quizScedule.callQuiz = function(req,reply) {
 		var sql ="SELECT * FROM `quizquestion` WHERE `quizOn` > CURRENT_TIMESTAMP GROUP by quizOn";
 		db.query(sql,function(err,res){
 				if(!err){
@@ -16,7 +16,12 @@ quizScedule.callQuiz = function() {
 						timeList.push(moment(qus.quizOn).format("YYYY-MM-DD HH:mm:ss"))
 					})
 					socketComponent.scheduleJobEvents(timeList);
-				}
+          if(reply)
+            return reply({"status":200})
+				} else {
+          if(reply)
+            return reply({"status":400})
+        }
 		});
 }
 

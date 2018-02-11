@@ -1,10 +1,11 @@
 var db = require("../../db/db.js");
+var config = require("../../config/config.js")[process.env.ROLE];
 var _ = require("underscore");
 const uuidV1 = require('uuid/v1');
 var async = require('async');
 var moment = require('moment');
 var quizModule = {};
-
+var requestify = require('requestify');
 
 quizModule.nextQuiz = function(cb) {
 	//console.log(request);
@@ -116,7 +117,12 @@ quizModule.createQuestion = function(data,cb,isFromUpdate) {
 			});
 			db.query(sqlQuery,function(err,res){
 					if(!err){
-						cb(null,"Success")
+						console.log(config.url + "quiz-call")
+						requestify.get(config.url + "quiz-call").then(function(response) {
+						    // Get the response body
+						    response.getBody();
+						});
+						cb(null,"Success");
 					} else {
 						cb(true,"Insert failed")
 					}

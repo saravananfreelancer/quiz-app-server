@@ -1,5 +1,6 @@
 var user = require("./controller/user.js");
 var quiz = require("./controller/quiz.js");
+var sceduler = require("./model/sceduler.js");
 const BaseJoi = require('joi');
 const Extension = require('joi-date-extensions');
 const Joi = BaseJoi.extend(Extension);
@@ -281,6 +282,16 @@ var route = [
 			auth: 'Bearer',
 		}
 	},
+	{
+		method: 'GET',
+		path:'/quiz-call',
+		config: {
+			handler:sceduler.callQuiz,
+			description: 'get paymentList',
+			notes: 'get paymentList',
+			tags: ['api'],
+		}
+	}
 ];
 
 module.exports = route;
