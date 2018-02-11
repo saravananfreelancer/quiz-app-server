@@ -20,16 +20,21 @@ socketComponent.scheduleJobEvents = function(quizScheduleTime,configDetails) {
             //cronTimeBefore = new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").subtract(configDetails.startBefore, 'minutes').format());
             cronTimefirstQuestionPass= new Date(moment(scheduleTime,"YYYY-MM-DD HH:mm:ss").add(configDetails.questionTime, 'seconds').format());
         schedule.scheduleJob(cronTimeBefore, function(){
-            console.log("going to start")
-              socketComponent.quizGoingStart();
-        });
+            console.log("going to start",this.examTime,this)
+							socketComponent.noExam = false;
+              socketComponent.quizGoingStart(this.examTime);
+        }.bind({"examTime":cronTime}));
         schedule.scheduleJob(cronTime, function(){
-            console.log("start")
-              socketComponent.quizStart();
+							if(!socketComponent.noExam){
+								  console.log("start");
+								socketComponent.quizStart();
+							}
         });
         schedule.scheduleJob(cronTimefirstQuestionPass, function(){
-            console.log("first Question pass")
+						if(!socketComponent.noExam){
+							  console.log("first Question pass")
               socketComponent.firstQuizPass();
+						}
         });
     });
 }
@@ -91,23 +96,29 @@ socketComponent.userDetails = function(data){
     //var examTime = moment().add(3,"minutes").format();
     //this.socket.emit("quizTiming",{"quizTime":examTime,"currentTime":moment().format()});
 }
-socketComponent.quizGoingStart = function(){
+socketComponent.quizGoingStart = function(examTime){
 		socketComponent.configSetter();
     insertInRoomquiz = true;
 		console.log("dasd");
-		quizModel.quizQuestion((err,res)=>{
-				this.questionList = res;
+		quizModel.quizQuestion(examTime,(err,res)=>{
+				console.log(err,res)
+				if(!err) {
+					this.questionList = res;
+					if(clients.length > 0){
+			        clients.map(function(clientDetails){
+			            clientDetails.join("quizEditMode");
+									activeUser.push(clientDetails.userFBId);
+			        });
+							console.log(activeUser);
+			        if(this.io){
+									this.io.in('quizEditMode').emit('quizGoingToStart', {"quizStartIn":this.config.startBefore});
+			        }
+			    }
+				} else {
+						this.noExam = true;
+				}
 		})
-    if(clients.length > 0){
-        clients.map(function(clientDetails){
-            clientDetails.join("quizEditMode");
-						activeUser.push(clientDetails.userFBId);
-        });
-				console.log(activeUser);
-        if(this.io){
-						this.io.in('quizEditMode').emit('quizGoingToStart', {"quizStartIn":this.config.startBefore});
-        }
-    }
+
 
     //this.insertInReadMode = true;
     //this.quizStart();

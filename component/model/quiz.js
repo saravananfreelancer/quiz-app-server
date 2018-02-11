@@ -33,8 +33,9 @@ quizModule.deleteSocketSession = function(data,cb) {
 		cb(null,true)
 	})
 }
-quizModule.quizQuestion = function(cb) {
-	db.query("SELECT * FROM `quizquestion` WHERE `quizOn` > CURRENT_TIMESTAMP ORDER by quizOn ASC LIMIT 2",function(err,res) {
+quizModule.quizQuestion = function(examTime,cb) {
+	//db.query("SELECT * FROM `quizquestion` WHERE `quizOn` > CURRENT_TIMESTAMP ORDER by quizOn ASC LIMIT 12",function(err,res) {
+	db.query("SELECT * FROM `quizquestion` WHERE `quizOn` = '"+moment(examTime).format("YYYY-MM-DD HH:mm:ss")+"'",function(err,res) {
 			if(!err && res.length > 0){
 				var questionList = [];
 				_.each(res,function(ques){
@@ -45,6 +46,8 @@ quizModule.quizQuestion = function(cb) {
 						})
 				})
 				cb(null,questionList)
+			} else {
+				cb(true)
 			}
 	})
 }
